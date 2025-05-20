@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.log
+
+# Airflow
+airflow.db
+logs/
+unittest.cfg
+
+# Environnement
+.env
+*.env
+
+# Secrets
+credentials.yml
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
