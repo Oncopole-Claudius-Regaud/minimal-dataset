@@ -84,8 +84,8 @@ Le pipeline CI effectue :
 
 - Linting Python (flake8)
 - Tests unitaires de connexion (IRIS, Oracle, PostgreSQL)
-- Gestion conditionnelle du fichier credentials.yml
 - Installation dynamique des dépendances système
+- Déploiement des nouveaux fichiers à jour sur le serveur Airflow
 -  Redémarrage automatique d’Airflow via systemd
 
 
