@@ -77,7 +77,7 @@ flake8 . --exclude=__pycache__,config,utils/patients.py --max-line-length=120
 Voici le diagram de flux de déploiement automatique du projet :
 
 <p align="center">
-  <img src="docs/cicd.png" alt="Diagramme CI/CD" width="600"/>
+  <img src="docs/pipeline-ci-cd.png" alt="Diagramme CI/CD" width="600"/>
 </p>
 
 Le pipeline CI effectue :
