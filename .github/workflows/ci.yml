@@ -15,19 +15,29 @@ jobs:
 
       - name: Mise à jour des DAGs et Redémarrage Airflow
         env:
-          # On récupère le mot de passe depuis vos secrets GitHub
           SUDO_PASS: ${{ secrets.HOST_PASSWORD }}
         run: |
-          # 1. Mise à jour des fichiers
-          mkdir -p /home/administrateur/airflow/dags/minimal-dataset
-          rm -rf /home/administrateur/airflow/dags/minimal-dataset/*
-          cp -r ./* /home/administrateur/airflow/dags/minimal-dataset/
+          # Définition propre du dossier cible (on utilise l'underscore pour éviter les erreurs Python plus tard)
+          TARGET_DIR="/home/administrateur/airflow/dags/minimal_dataset"
           
-          echo "Fichiers copiés. Tentative de redémarrage des services..."
+          echo "Début du déploiement dans $TARGET_DIR"
 
-          # 2. Redémarrage des services avec sudo -S
-          # On "injecte" le mot de passe dans la commande sudo
+          # 1. Création du dossier avec sudo pour éviter les refus de permission
+          echo "$SUDO_PASS" | sudo -S mkdir -p $TARGET_DIR
+          echo "$SUDO_PASS" | sudo -S chown -R administrateur:administrateur $TARGET_DIR
+          
+          # 2. Nettoyage et Copie
+          # On utilise -f pour forcer et on affiche ce qu'on fait
+          rm -rf $TARGET_DIR/*
+          cp -rv ./* $TARGET_DIR/
+          
+          # 3. Vérification immédiate pour le log GitHub
+          echo "Contenu du dossier après copie :"
+          ls -la $TARGET_DIR
+
+          # 4. Redémarrage des services
+          echo "Redémarrage d'Airflow..."
           echo "$SUDO_PASS" | sudo -S systemctl restart airflow-webserver
           echo "$SUDO_PASS" | sudo -S systemctl restart airflow-scheduler
           
-          echo "Le déploiement et le redémarrage des services ont été effectués."
+          echo "Déploiement terminé avec succès."
