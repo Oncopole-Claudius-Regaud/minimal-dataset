@@ -1,0 +1,37 @@
+me: Deploy minimal-dataset
+
+# Déclenchement sur une branche spécifique
+on:
+  push:
+    branches:
+      - POC_1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Récupérer le code du repo
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # 2. Copier les fichiers sur le serveur distant via SSH
+      - name: Copy files to remote server
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Chemin de destination sur le serveur
+            TARGET_DIR=~/airflow/dags/minimal-dataset
+
+            # Supprimer l'ancien contenu (optionnel)
+            rm -rf $TARGET_DIR/*
+
+            # Copier le contenu du repo GitHub
+            cp -r $GITHUB_WORKSPACE/* $TARGET_DIR/
+
+            # Afficher le contenu pour vérification
+            ls -la $TARGET_DIR
+
