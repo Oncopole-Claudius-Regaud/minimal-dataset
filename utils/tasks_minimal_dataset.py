@@ -1,48 +1,51 @@
 import pandas as pd
 import sys
 import os
+from cryptography.fernet import Fernet
+from airflow.hooks.base import BaseHook
 
-# Ajoute la racine du projet au chemin Python
-# (Remonte d'un niveau pour sortir de 'utils' et être dans 'minimal_dataset')
+# Configuration des chemins pour l'import local
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# Import depuis votre fichier db.py local
 from minimal_dataset.utils.db import connect_to_iris, get_oncopole_hook
 
-def extract_patients():
-    """Extraction depuis IRIS"""
-    connection = connect_to_iris()
-    
-    # Chemin absolu vers le SQL pour éviter les erreurs de dossier de travail
-    sql_path = os.path.join(project_root, "sql", "extract_bio.sql")
-    
-    with open(sql_path, "r", encoding="utf-8") as f:
-        query = f.read()
-    
-    df = pd.read_sql(query, connection)
-    connection.close()
-    return df
-
-def save_patients(df):
-    """Sauvegarde locale"""
-    output_path = os.path.join(project_root, "data", "patients.csv")
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    df.to_csv(output_path, index=False, encoding="utf-8")
-
-    
+def encrypt_value(value, cipher):
+    """Chiffre une valeur en string. Retourne None si la valeur est vide."""
+    if value is None or str(value).strip() == "" or str(value).lower() == "none":
+        return None
+    # Encodage en bytes puis chiffrement et retour en string
+    return cipher.encrypt(str(value).encode()).decode()
 
 def push_to_target_patient(df):
-    """Push vers minimal_dataset.patient en utilisant les alias SQL"""
+    """
+    Push vers minimal_dataset.patient avec chiffrement.
+    La clé est récupérée dans le champ 'Password' de la connexion 'key_encrypt_minimal_dataset'.
+    """
+    
+    # 1. Récupération de la clé via BaseHook
+    try:
+        # On récupère l'objet connexion complet
+        conn_config = BaseHook.get_connection("key_encrypt_minimal_dataset")
+        encryption_key = conn_config.password
+        
+        if not encryption_key:
+            raise ValueError("Le champ Password de la connexion est vide.")
+            
+        cipher = Fernet(encryption_key.encode())
+    except Exception as e:
+        print(f"Erreur lors de la récupération de la clé de chiffrement : {e}")
+        raise e
+
+    # Connexion à la base cible
     conn = get_oncopole_hook()
     cursor = conn.cursor()
+    
     try:
         # Vidage de la table avant insertion
         cursor.execute("TRUNCATE TABLE minimal_dataset.patient;")
         
-        # Requête d'insertion vers PostgreSQL
-        # Note : les noms de colonnes à gauche sont ceux de la table Postgres
         insert_query = """
             INSERT INTO minimal_dataset.patient (
                 ipp_ocr, ipp_chu, gender, date_of_death, 
@@ -51,27 +54,30 @@ def push_to_target_patient(df):
         """
 
         for _, row in df.iterrows():
-            # ICI : Les noms dans row.get() correspondent EXACTEMENT à vos alias SQL
+            # 2. Chiffrement des colonnes sensibles avant insertion
+            # On applique encrypt_value sur les alias de votre requête SQL
             values = (
-                row.get('ipp_ocr'),       
-                row.get('ipp_chu'),       
-                row.get('gender'),        
-                row.get('date_of_death'), 
-                row.get('nom'),           
-                row.get('prenom'),        
-                row.get('date_of_birth'), 
+                encrypt_value(row.get('ipp_ocr'), cipher),       
+                encrypt_value(row.get('ipp_chu'), cipher),       
+                encrypt_value(row.get('gender'), cipher),        
+                encrypt_value(row.get('date_of_death'), cipher), 
+                encrypt_value(row.get('nom'), cipher),           
+                encrypt_value(row.get('prenom'), cipher),        
+                row.get('date_of_birth'), # Date brute (Postgres gère le format DATE)
                 row.get('birth_city')
             )
             
             cursor.execute(insert_query, values)
         
         conn.commit()
-        print(f"Succès : {len(df)} lignes insérées avec les alias corrects.")
+        print(f"Succès : {len(df)} lignes chiffrées et insérées dans PostgreSQL.")
         
     except Exception as e:
         conn.rollback()
-        print(f"Erreur d'insertion : {e}")
+        print(f"Erreur lors de l'insertion : {e}")
         raise e
     finally:
         cursor.close()
         conn.close()
+
+# Gardez vos fonctions extract_patients et save_patients telles quelles
