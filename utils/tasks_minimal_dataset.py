@@ -31,45 +31,46 @@ def save_patients(df):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, index=False, encoding="utf-8")
 
+    
+
 def push_to_target_patient(df):
-    """Push vers la table minimal_dataset.patient avec les bonnes colonnes"""
+    """Push vers minimal_dataset.patient en utilisant les alias SQL"""
     conn = get_oncopole_hook()
     cursor = conn.cursor()
     try:
-        # On vide la table avant insertion
+        # Vidage de la table avant insertion
         cursor.execute("TRUNCATE TABLE minimal_dataset.patient;")
+        
+        # Requête d'insertion vers PostgreSQL
+        # Note : les noms de colonnes à gauche sont ceux de la table Postgres
         insert_query = """
             INSERT INTO minimal_dataset.patient (
-                ipp_ocr, 
-                ipp_chu, 
-                gender, 
-                date_of_death, 
-                nom, 
-                prenom, 
-                date_of_birth, 
-                birth_city
+                ipp_ocr, ipp_chu, gender, date_of_death, 
+                nom, prenom, date_of_birth, birth_city
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
 
         for _, row in df.iterrows():
-            cursor.execute(
-                insert_query,
-                (
-                    row.get('patient_id'),
-                    None,                      
-                    row.get('gender'),         
-                    None,              
-                    row.get('name'),           
-                    row.get('prenom'),         
-                    row.get('dob'),             
-                    None                        
-                )
+            # ICI : Les noms dans row.get() correspondent EXACTEMENT à vos alias SQL
+            values = (
+                row.get('ipp_ocr'),       
+                row.get('ipp_chu'),       
+                row.get('gender'),        
+                row.get('date_of_death'), 
+                row.get('nom'),           
+                row.get('prenom'),        
+                row.get('date_of_birth'), 
+                row.get('birth_city')
             )
+            
+            cursor.execute(insert_query, values)
+        
         conn.commit()
-        print("Insertion réussie dans minimal_dataset.patient")
+        print(f"Succès : {len(df)} lignes insérées avec les alias corrects.")
+        
     except Exception as e:
         conn.rollback()
-        print(f"Erreur lors de l'insertion : {e}")
+        print(f"Erreur d'insertion : {e}")
         raise e
     finally:
         cursor.close()
