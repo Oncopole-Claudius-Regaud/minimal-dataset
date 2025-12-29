@@ -1,6 +1,4 @@
 me: Deploy minimal-dataset
-
-# Déclenchement sur une branche spécifique
 on:
   push:
     branches:
@@ -11,11 +9,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Récupérer le code du repo
       - name: Checkout repo
         uses: actions/checkout@v3
-
-      # 2. Copier les fichiers sur le serveur distant via SSH
       - name: Copy files to remote server
         uses: appleboy/ssh-action@v0.1.8
         with:
