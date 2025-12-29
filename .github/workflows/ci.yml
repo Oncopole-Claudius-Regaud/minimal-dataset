@@ -1,51 +1,31 @@
-name: Deploy ETL Oncopole
+name: Déploiement Local via Runner
 
 on:
   push:
-    branches: POC_1 # ou develop si tu veux
+    branches:
+      - POC_1
 
 jobs:
   deploy:
-    name: Déployer le repo sur Airflow
-    runs-on: ubuntu-latest
+    # On cible votre runner local "CliDataDSIN"
+    runs-on: self-hosted
+
     steps:
-      # 1️⃣ Récupérer le code du repo
-      - name: Checkout code
-        uses: actions/checkout@v3
+      # Étape 1 : Récupérer le code source du repo GitHub sur la machine
+      - name: Checkout du repo
+        uses: actions/checkout@v4
 
-      # 2️⃣ Créer le dossier sur le serveur et nettoyer l'ancien contenu
-      - name: Préparer le serveur
-        uses: appleboy/ssh-action@v0.1.9
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          debug: true
-          script: |
-            mkdir -p ~/airflow/dags/minimal-dataset
-            rm -rf ~/airflow/dags/minimal-dataset/*
-
-      # 3️⃣ Copier le repo sur le serveur
-      - name: Copier le repo sur le serveur
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          source: "./"  # copie tout le repo
-          target: "~/airflow/dags/minimal-dataset"
-
-      # 4️⃣ Redémarrer Airflow
-      - name: Restart Airflow
-        uses: appleboy/ssh-action@v0.1.9
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          debug: true
-          script: |
-            sudo systemctl restart airflow-webserver.service
-            sudo systemctl restart airflow-scheduler.service
+      # Étape 2 : Déployer les fichiers vers le dossier Airflow local
+      - name: Mise à jour des DAGs Airflow
+        run: |
+          # Création du dossier cible s'il n'existe pas
+          mkdir -p /home/administrateur/airflow/dags/minimal-dataset
+          
+          # Nettoyage du dossier avant la copie pour éviter les vieux fichiers
+          rm -rf /home/administrateur/airflow/dags/minimal-dataset/*
+          
+          # Copie de tout le contenu du repo vers le dossier Airflow
+          # Le "." représente le dossier où le runner a téléchargé votre code
+          cp -r ./* /home/administrateur/airflow/dags/minimal-dataset/
+          
+          echo "Le déploiement sur la branche POC_1 a réussi."
