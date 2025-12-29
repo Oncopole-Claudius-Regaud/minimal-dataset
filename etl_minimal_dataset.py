@@ -1,7 +1,7 @@
 from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from tasks_minimal_dataset import extract_patients, save_patients, push_to_target_patient
+from minimal-dataset.utils.tasks_minimal_dataset import extract_patients, save_patients, push_to_target_patient
 
 def etl_task():
     df = extract_patients()
