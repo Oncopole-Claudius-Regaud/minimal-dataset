@@ -1,5 +1,11 @@
 import pandas as pd
-from minimal_dataset.utils.db import connect_to_iris, get_oncopole_hook
+import sys
+import os
+
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from utils.db import connect_to_iris, get_oncopole_hook
 
 def extract_patients():
     """

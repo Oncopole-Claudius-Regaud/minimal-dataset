@@ -1,25 +1,32 @@
 from datetime import datetime
+import sys
+import os
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from minimal_dataset.utils.tasks_minimal_dataset import extract_patients, save_patients, push_to_target_patient
+
+# AJOUT CRUCIAL : On force Python à regarder dans le dossier courant
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+# Import simplifié (maintenant que le dossier est dans le PATH)
+# Note : On cherche le fichier dans le sous-dossier utils du projet
+from utils.tasks_minimal_dataset import extract_patients, save_patients, push_to_target_patient
 
 def etl_task():
     df = extract_patients()
-    save_patients(df)            # sauvegarde locale
-    push_to_target_patient(df)   # push dans Oncopole
+    save_patients(df)
+    push_to_target_patient(df)
 
 default_args = {
     "owner": "airflow",
-    "depends_on_past": False,
-    "retries": 1,
+    "start_date": datetime(2025, 1, 1),
 }
 
 with DAG(
     dag_id="etl_minimal_dataset",
     default_args=default_args,
-    description="ETL minimal dataset - extraction patients IRIS et push Oncopole",
     schedule_interval=None,
-    start_date=datetime(2025, 1, 1),
     catchup=False,
     tags=["ETL", "patients"],
 ) as dag:
