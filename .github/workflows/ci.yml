@@ -29,3 +29,8 @@ jobs:
           cp -r ./* /home/administrateur/airflow/dags/minimal-dataset/
           
           echo "Le déploiement sur la branche POC_1 a réussi."
+          
+          sudo systemctl restart airflow-webserver
+          sudo systemctl restart airflow-scheduler
+          
+          echo "Le déploiement et le redémarrage des services ont été effectués."
