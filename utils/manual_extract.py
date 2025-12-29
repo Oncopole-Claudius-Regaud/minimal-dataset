@@ -1,58 +1,68 @@
 import os
 import sys
 import pandas as pd
+from datetime import datetime
 from cryptography.fernet import Fernet
-# On réutilise vos utilitaires existants pour la connexion
+
+# Ajout du chemin pour les imports locaux
 sys.path.append(os.getcwd())
 from utils.db import get_oncopole_hook
 
 def decrypt_value(value, cipher):
-    """Tente de déchiffrer une valeur, sinon retourne la valeur brute"""
+    """Déchiffre si possible, sinon retourne brut"""
     if value is None or str(value).strip() == "":
         return value
     try:
         return cipher.decrypt(str(value).encode()).decode()
     except Exception:
-        # Si le déchiffrement échoue (donnée pas chiffrée), on rend la valeur telle quelle
         return value
 
 def main():
     decrypt_flag = os.getenv("DECRYPT_DATA") == "true"
-    sql_file = "sql/extract_data.sql"
+    # Dossier de destination (facilement accessible)
+    output_dir = "/home/administrateur/extractions"
     
-    print(f"Option Déchiffrement : {decrypt_flag}")
+    # 1. Création du dossier s'il n'existe pas
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
 
-    # 1. Connexion et Extraction
+    # 2. Lecture SQL et Extraction
+    sql_file = "sql/extract_data.sql"
     conn = get_oncopole_hook()
+    
     with open(sql_file, "r") as f:
         query = f.read()
     
     df = pd.read_sql(query, conn)
     conn.close()
 
-    # 2. Logique de déchiffrement
+    # 3. Logique de déchiffrement
     if decrypt_flag:
         key = os.getenv("KEY_ENCRYPT_MINIMAL_DATASET")
         if not key:
-            print("Erreur : Clé de déchiffrement manquante dans les secrets.")
+            print("ERREUR : Secret KEY_ENCRYPT_MINIMAL_DATASET manquant.")
             sys.exit(1)
         
         cipher = Fernet(key.encode())
-        
-        # On applique le déchiffrement sur toutes les colonnes de type 'objet/string'
-        # car on ne sait pas à l'avance lesquelles sont chiffrées
-        cols_to_decrypt = ['ipp_ocr', 'ipp_chu', 'gender', 'nom', 'prenom']
-        for col in cols_to_decrypt:
+        # Colonnes à traiter
+        cols = ['ipp_ocr', 'ipp_chu', 'gender', 'nom', 'prenom']
+        for col in cols:
             if col in df.columns:
                 df[col] = df[col].apply(lambda x: decrypt_value(x, cipher))
-        print("Données déchiffrées avec succès.")
+        print("--- Données déchiffrées ---")
     else:
-        print("Récupération des données brutes (sans déchiffrement).")
+        print("--- Données brutes (chiffrées) ---")
 
-    # 3. Affichage ou Sauvegarde
-    print(df.head())
-    df.to_csv("data/manual_extraction_result.csv", index=False)
-    print("Résultat sauvegardé dans data/manual_extraction_result.csv")
+    # 4. Sauvegarde CSV avec Date et Heure
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    mode = "DECRYPTED" if decrypt_flag else "RAW"
+    filename = f"extract_patients_{mode}_{timestamp}.csv"
+    filepath = os.path.join(output_dir, filename)
+
+    df.to_csv(filepath, index=False, sep=";", encoding="utf-8")
+    
+    print(f"Extraction terminée avec succès !")
+    print(f"Fichier disponible ici : {filepath}")
 
 if __name__ == "__main__":
     main()
