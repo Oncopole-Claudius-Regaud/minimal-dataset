@@ -1,0 +1,52 @@
+# ======================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+.env
+.venv
+venv/
+ENV/
+
+# ======================
+# Airflow
+# ======================
+airflow.db
+airflow.cfg
+airflow-webserver.pid
+logs/
+unittests.cfg
+
+# ======================
+# IDE / Éditeurs
+# ======================
+.vscode/
+.idea/
+*.iml
+
+# ======================
+# OS
+# ======================
+.DS_Store
+Thumbs.db
+
+# ======================
+# Data / Outputs
+# ======================
+data/
+output/
+tmp/
+*.csv
+*.parquet
+*.json
+*.log
+
+# ======================
+# Git
+# ======================
+*.swp
+*.bak
+*~
+
