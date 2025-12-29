@@ -13,7 +13,7 @@ if dag_folder not in sys.path:
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from utils.tasks_minimal_dataset import extract_patients, save_patients, push_to_target_patient
+from minimal_dataset.utils.tasks_minimal_dataset import extract_patients, save_patients, push_to_target_patient
 
 def etl_task():
     """Fonction principale de l'ETL"""
