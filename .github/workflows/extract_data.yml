@@ -1,0 +1,24 @@
+name: "Extraction et Déchiffrement Manuel"
+
+on:
+  workflow_dispatch:
+    inputs:
+      decrypt_data:
+        description: 'Déchiffrer les données (True/False)'
+        required: true
+        default: 'false'
+        type: boolean
+
+jobs:
+  extract:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout du repo
+        uses: actions/checkout@v4
+
+      - name: Execution de l'extraction
+        env:
+          DECRYPT_DATA: ${{ github.event.inputs.decrypt_data }}
+          KEY_ENCRYPT_MINIMAL_DATASET: ${{ secrets.KEY_ENCRYPT_MINIMAL_DATASET }}
+        run: |
+          python3 scripts/manual_extract.py

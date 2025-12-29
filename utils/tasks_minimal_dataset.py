@@ -47,10 +47,7 @@ def push_to_target_patient(df):
     Chiffre les données sensibles et les insère dans PostgreSQL.
     La clé est récupérée dans le champ PASSWORD de la connexion Airflow.
     """
-    
-    # 1. RÉCUPÉRATION DE LA CLÉ DE CHIFFREMENT
     try:
-        # On utilise le Conn ID que vous avez créé dans Airflow
         conn_info = BaseHook.get_connection("key_encrypt_minimal_dataset")
         encryption_key = conn_info.password
         
@@ -62,15 +59,11 @@ def push_to_target_patient(df):
         print(f"Erreur lors de l'initialisation du chiffrement : {e}")
         raise e
 
-    # 2. CONNEXION À LA BASE CIBLE
     conn = get_oncopole_hook()
     cursor = conn.cursor()
     
     try:
-        # Vidage de la table pour le POC
         cursor.execute("TRUNCATE TABLE minimal_dataset.patient;")
-        
-        # Requête d'insertion respectant les colonnes de votre table Postgres
         insert_query = """
             INSERT INTO minimal_dataset.patient (
                 ipp_ocr, ipp_chu, gender, date_of_death, 
@@ -79,8 +72,6 @@ def push_to_target_patient(df):
         """
 
         for _, row in df.iterrows():
-            # 3. CHIFFREMENT ET MAPPING
-            # On applique encrypt_value sur les alias définis dans votre SQL (ipp_ocr, nom, etc.)
             values = (
                 encrypt_value(row.get('ipp_ocr'), cipher),       
                 encrypt_value(row.get('ipp_chu'), cipher),       
@@ -88,7 +79,7 @@ def push_to_target_patient(df):
                 encrypt_value(row.get('date_of_death'), cipher), 
                 encrypt_value(row.get('nom'), cipher),           
                 encrypt_value(row.get('prenom'), cipher),        
-                row.get('date_of_birth'), # On garde généralement la date en clair pour les index
+                row.get('date_of_birth'),
                 row.get('birth_city')
             )
             
