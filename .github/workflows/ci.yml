@@ -7,30 +7,27 @@ on:
 
 jobs:
   deploy:
-    # On cible votre runner local "CliDataDSIN"
     runs-on: self-hosted
 
     steps:
-      # Étape 1 : Récupérer le code source du repo GitHub sur la machine
       - name: Checkout du repo
         uses: actions/checkout@v4
 
-      # Étape 2 : Déployer les fichiers vers le dossier Airflow local
-      - name: Mise à jour des DAGs Airflow
+      - name: Mise à jour des DAGs et Redémarrage Airflow
+        env:
+          # On récupère le mot de passe depuis vos secrets GitHub
+          SUDO_PASS: ${{ secrets.HOST_PASSWORD }}
         run: |
-          # Création du dossier cible s'il n'existe pas
+          # 1. Mise à jour des fichiers
           mkdir -p /home/administrateur/airflow/dags/minimal-dataset
-          
-          # Nettoyage du dossier avant la copie pour éviter les vieux fichiers
           rm -rf /home/administrateur/airflow/dags/minimal-dataset/*
-          
-          # Copie de tout le contenu du repo vers le dossier Airflow
-          # Le "." représente le dossier où le runner a téléchargé votre code
           cp -r ./* /home/administrateur/airflow/dags/minimal-dataset/
           
-          echo "Le déploiement sur la branche POC_1 a réussi."
-          
-          sudo systemctl restart airflow-webserver
-          sudo systemctl restart airflow-scheduler
+          echo "Fichiers copiés. Tentative de redémarrage des services..."
+
+          # 2. Redémarrage des services avec sudo -S
+          # On "injecte" le mot de passe dans la commande sudo
+          echo "$SUDO_PASS" | sudo -S systemctl restart airflow-webserver
+          echo "$SUDO_PASS" | sudo -S systemctl restart airflow-scheduler
           
           echo "Le déploiement et le redémarrage des services ont été effectués."
