@@ -1,4 +1,4 @@
-me: Deploy minimal-dataset
+name: Deploy minimal-dataset
 on:
   push:
     branches:
