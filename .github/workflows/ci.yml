@@ -1,28 +1,51 @@
-name: Déploiement SSH
+name: Deploy ETL Oncopole
 
 on:
   push:
-    branches:
-      - POC_1
+    branches: POC_1 # ou develop si tu veux
 
 jobs:
   deploy:
+    name: Déployer le repo sur Airflow
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout du repo
+      # 1️⃣ Récupérer le code du repo
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Déployer via SSH
-        uses: appleboy/ssh-action@v0.1.8
+      # 2️⃣ Créer le dossier sur le serveur et nettoyer l'ancien contenu
+      - name: Préparer le serveur
+        uses: appleboy/ssh-action@v0.1.9
         with:
-          host: ${{ secrets.SSH_HOST }}         # IP ou hostname du serveur
-          username: ${{ secrets.SSH_USER }}     # utilisateur SSH
-          key: ${{ secrets.SSH_PRIVATE_KEY }}   # clé privée
-          port: 22                               # port SSH
-          source: "./"                           # dossier local à copier (repo)
-          target: "~/airflow/dags/minimal-dataset"  # dossier cible sur le serveur
-          rm: true                               # supprime le contenu cible avant copie
-          debug: true                            # affiche les logs détaillés pour debug
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          debug: true
+          script: |
+            mkdir -p ~/airflow/dags/minimal-dataset
+            rm -rf ~/airflow/dags/minimal-dataset/*
 
+      # 3️⃣ Copier le repo sur le serveur
+      - name: Copier le repo sur le serveur
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          source: "./"  # copie tout le repo
+          target: "~/airflow/dags/minimal-dataset"
 
+      # 4️⃣ Redémarrer Airflow
+      - name: Restart Airflow
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          debug: true
+          script: |
+            sudo systemctl restart airflow-webserver.service
+            sudo systemctl restart airflow-scheduler.service
