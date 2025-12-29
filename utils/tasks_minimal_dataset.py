@@ -32,17 +32,45 @@ def save_patients(df):
     df.to_csv(output_path, index=False, encoding="utf-8")
 
 def push_to_target_patient(df):
-    """Push vers Oncopole"""
+    """Push vers la table minimal_dataset.patient avec les bonnes colonnes"""
     conn = get_oncopole_hook()
     cursor = conn.cursor()
     try:
-        cursor.execute("TRUNCATE TABLE target_patient;")
+        # On vide la table avant insertion
+        cursor.execute("TRUNCATE TABLE minimal_dataset.patient;")
+        insert_query = """
+            INSERT INTO minimal_dataset.patient (
+                ipp_ocr, 
+                ipp_chu, 
+                gender, 
+                date_of_death, 
+                nom, 
+                prenom, 
+                date_of_birth, 
+                birth_city
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+
         for _, row in df.iterrows():
             cursor.execute(
-                "INSERT INTO target_patient (patient_id, name, dob) VALUES (%s, %s, %s)",
-                (row['patient_id'], row['name'], row['dob'])
+                insert_query,
+                (
+                    row.get('patient_id'),
+                    None,                      
+                    row.get('gender'),         
+                    None,              
+                    row.get('name'),           
+                    row.get('prenom'),         
+                    row.get('dob'),             
+                    None                        
+                )
             )
         conn.commit()
+        print("Insertion réussie dans minimal_dataset.patient")
+    except Exception as e:
+        conn.rollback()
+        print(f"Erreur lors de l'insertion : {e}")
+        raise e
     finally:
         cursor.close()
         conn.close()
