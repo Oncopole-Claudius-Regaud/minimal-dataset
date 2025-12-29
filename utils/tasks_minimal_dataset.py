@@ -1,5 +1,5 @@
 import pandas as pd
-from utils.db import connect_to_iris, get_oncopole_hook
+from minimal_dataset.utils.db import connect_to_iris, get_oncopole_hook
 
 def extract_patients():
     """
