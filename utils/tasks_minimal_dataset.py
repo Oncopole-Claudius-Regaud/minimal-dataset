@@ -9,7 +9,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 # Import depuis votre fichier db.py local
-from utils.db import connect_to_iris, get_oncopole_hook
+from minimal_dataset.utils.db import connect_to_iris, get_oncopole_hook
 
 def extract_patients():
     """Extraction depuis IRIS"""
