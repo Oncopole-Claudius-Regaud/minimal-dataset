@@ -2,52 +2,47 @@ import pandas as pd
 import sys
 import os
 
+# Ajoute la racine du projet au chemin Python
+# (Remonte d'un niveau pour sortir de 'utils' et être dans 'minimal_dataset')
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+# Import depuis votre fichier db.py local
 from utils.db import connect_to_iris, get_oncopole_hook
 
 def extract_patients():
-    """
-    Extrait les patients depuis IRIS via la requête SQL.
-    """
+    """Extraction depuis IRIS"""
     connection = connect_to_iris()
     
-    with open("sql/extract_bio.sql", "r", encoding="utf-8") as f:
+    # Chemin absolu vers le SQL pour éviter les erreurs de dossier de travail
+    sql_path = os.path.join(project_root, "sql", "extract_bio.sql")
+    
+    with open(sql_path, "r", encoding="utf-8") as f:
         query = f.read()
     
     df = pd.read_sql(query, connection)
     connection.close()
-    
     return df
 
-def save_patients(df, output_path="data/patients.csv"):
-    """
-    Sauvegarde le DataFrame dans un CSV local.
-    """
+def save_patients(df):
+    """Sauvegarde locale"""
+    output_path = os.path.join(project_root, "data", "patients.csv")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, index=False, encoding="utf-8")
 
-
 def push_to_target_patient(df):
-    """
-    Truncate la table target_patient et pousse le DataFrame dans Oncopole.
-    """
+    """Push vers Oncopole"""
     conn = get_oncopole_hook()
     cursor = conn.cursor()
-
-    # Truncate table avant insertion
-    cursor.execute("TRUNCATE TABLE target_patient;")
-
-    # Insertion des données
-    for _, row in df.iterrows():
-        cursor.execute(
-            """
-            INSERT INTO target_patient (patient_id, name, dob)
-            VALUES (%s, %s, %s)
-            """,
-            (row['patient_id'], row['name'], row['dob'])
-        )
-
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        cursor.execute("TRUNCATE TABLE target_patient;")
+        for _, row in df.iterrows():
+            cursor.execute(
+                "INSERT INTO target_patient (patient_id, name, dob) VALUES (%s, %s, %s)",
+                (row['patient_id'], row['name'], row['dob'])
+            )
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
