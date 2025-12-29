@@ -1,4 +1,5 @@
-name: Deploy minimal-dataset
+name: Déploiement SSH
+
 on:
   push:
     branches:
@@ -9,24 +10,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout du repo
         uses: actions/checkout@v3
-      - name: Copy files to remote server
+
+      - name: Déployer via SSH
         uses: appleboy/ssh-action@v0.1.8
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            # Chemin de destination sur le serveur
-            TARGET_DIR=~/airflow/dags/minimal-dataset
+          host: ${{ secrets.SSH_HOST }}         # IP ou hostname du serveur
+          username: ${{ secrets.SSH_USER }}     # utilisateur SSH
+          key: ${{ secrets.SSH_PRIVATE_KEY }}   # clé privée
+          port: 22                               # port SSH
+          source: "./"                           # dossier local à copier (repo)
+          target: "~/airflow/dags/minimal-dataset"  # dossier cible sur le serveur
+          rm: true                               # supprime le contenu cible avant copie
+          debug: true                            # affiche les logs détaillés pour debug
 
-            # Supprimer l'ancien contenu (optionnel)
-            rm -rf $TARGET_DIR/*
-
-            # Copier le contenu du repo GitHub
-            cp -r $GITHUB_WORKSPACE/* $TARGET_DIR/
-
-            # Afficher le contenu pour vérification
-            ls -la $TARGET_DIR
 
