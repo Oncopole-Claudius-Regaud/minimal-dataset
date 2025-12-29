@@ -21,4 +21,11 @@ jobs:
           DECRYPT_DATA: ${{ github.event.inputs.decrypt_data }}
           KEY_ENCRYPT_MINIMAL_DATASET: ${{ secrets.KEY_ENCRYPT_MINIMAL_DATASET }}
         run: |
-          python3 scripts/manual_extract.py
+          # On se place là où le script se trouve réellement
+          SCRIPT_PATH=$(find . -name "manual_extract.py" | head -n 1)
+          if [ -z "$SCRIPT_PATH" ]; then
+            echo "Erreur : Fichier manual_extract.py introuvable dans $(pwd)"
+            exit 1
+          fi
+          echo "Exécution de : $SCRIPT_PATH"
+          python3 "$SCRIPT_PATH"
