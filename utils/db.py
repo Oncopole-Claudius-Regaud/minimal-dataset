@@ -32,7 +32,7 @@ def get_oncopole_hook(conn_id=None):
     Si aucun conn_id n'est fourni, prend 'oncopole_test' par défaut.
     """
     if not conn_id:
-        conn_id = "oncopole_test"
+        conn_id = "postgres_test"
 
     conn = BaseHook.get_connection(conn_id)
 
