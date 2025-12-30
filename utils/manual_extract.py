@@ -4,13 +4,21 @@ import pandas as pd
 from datetime import datetime
 from cryptography.fernet import Fernet
 
-# Ajout du chemin pour les imports locaux
-sys.path.append(os.getcwd())
-from utils.db import get_oncopole_hook
+# --- GESTION DES CHEMINS D'IMPORT ---
+# On récupère le chemin absolu du dossier racine du projet
+# On remonte de 2 niveaux si le script est dans utils/ (ex: projet/utils/manual_extract.py)
+current_script_path = os.path.abspath(__file__)
+project_root = os.path.dirname(os.path.dirname(current_script_path))
+
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Maintenant l'import fonctionnera car le dossier parent est dans le PATH
+from minimal_dataset.utils.db import get_oncopole_hook
 
 def decrypt_value(value, cipher):
     """Déchiffre si possible, sinon retourne brut"""
-    if value is None or str(value).strip() == "":
+    if value is None or str(value).strip() == "" or str(value).lower() == "none":
         return value
     try:
         return cipher.decrypt(str(value).encode()).decode()
@@ -19,32 +27,30 @@ def decrypt_value(value, cipher):
 
 def main():
     decrypt_flag = os.getenv("DECRYPT_DATA") == "true"
-    # Dossier de destination (facilement accessible)
     output_dir = "/home/administrateur/extractions"
     
-    # 1. Création du dossier s'il n'existe pas
     if not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
 
-    # 2. Lecture SQL et Extraction
-    sql_file = "sql/extract_data.sql"
-    conn = get_oncopole_hook()
+    # Utilisation d'un chemin absolu pour le fichier SQL également
+    sql_file = os.path.join(project_root, "minimal_dataset", "sql", "extract_data.sql")
     
-    with open(sql_file, "r") as f:
+    print(f"Tentative de lecture SQL : {sql_file}")
+    
+    conn = get_oncopole_hook()
+    with open(sql_file, "r", encoding="utf-8") as f:
         query = f.read()
     
     df = pd.read_sql(query, conn)
     conn.close()
 
-    # 3. Logique de déchiffrement
     if decrypt_flag:
         key = os.getenv("KEY_ENCRYPT_MINIMAL_DATASET")
         if not key:
-            print("ERREUR : Secret KEY_ENCRYPT_MINIMAL_DATASET manquant.")
+            print("ERREUR : Secret KEY_ENCRYPT_MINIMAL_DATASET manquant dans GitHub.")
             sys.exit(1)
         
         cipher = Fernet(key.encode())
-        # Colonnes à traiter
         cols = ['ipp_ocr', 'ipp_chu', 'gender', 'nom', 'prenom']
         for col in cols:
             if col in df.columns:
@@ -53,7 +59,6 @@ def main():
     else:
         print("--- Données brutes (chiffrées) ---")
 
-    # 4. Sauvegarde CSV avec Date et Heure
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     mode = "DECRYPTED" if decrypt_flag else "RAW"
     filename = f"extract_patients_{mode}_{timestamp}.csv"
